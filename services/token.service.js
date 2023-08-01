@@ -23,3 +23,13 @@ export async function saveToken(userId, refreshToken) {
   const token = await TokenModel.create({ user: userId, refreshToken })
   return token
 }
+
+export async function removeToken(refreshToken) {
+  const token = await TokenModel.deleteOne({ refreshToken })
+  return token
+}
+
+export async function findToken(refreshToken) {
+  const token = await TokenModel.findOne({ refreshToken })
+  return token
+}
