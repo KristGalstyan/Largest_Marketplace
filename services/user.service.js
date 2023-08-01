@@ -7,7 +7,7 @@ import { ApiError } from '../ErrorValidation/ApiError.js'
 export async function signupService(userName, email, password) {
   const candidate = await UserModel.findOne({ email })
   if (candidate) {
-    throw ApiError.BadRequest(`User with ${email} email address already exists`)
+    throw ApiError.BadRequest(`Incorrect login or password`)
   }
   const hashPassword = await bcrypt.hash(password, 6)
 
@@ -16,6 +16,27 @@ export async function signupService(userName, email, password) {
     userName,
     password: hashPassword
   })
+  const userDto = new UserDto(user)
+  const tokens = generateTokens({ ...UserDto })
+  await saveToken(userDto.id, tokens.refreshToken)
+  return {
+    ...tokens,
+    user: userDto
+  }
+}
+
+export async function signinService(email, password) {
+  const user = await UserModel.findOne({ email })
+
+  if (!user) {
+    throw ApiError.BadRequest(`Incorrect login or password`)
+  }
+  const passCompare = await bcrypt.compare(password, user.password)
+
+  if (!passCompare) {
+    throw ApiError.BadRequest(`Incorrect login or password`)
+  }
+
   const userDto = new UserDto(user)
   const tokens = generateTokens({ ...UserDto })
   await saveToken(userDto.id, tokens.refreshToken)
