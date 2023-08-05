@@ -25,11 +25,24 @@ export async function saveToken(userId, refreshToken) {
 }
 
 export async function removeToken(refreshToken) {
-  const token = await TokenModel.deleteOne({ refreshToken })
-  return token
+  const tokenData = await TokenModel.deleteOne(refreshToken)
+  return tokenData
 }
 
-export async function findToken(refreshToken) {
-  const token = await TokenModel.findOne({ refreshToken })
-  return token
+export async function validateAccessToken(token) {
+  try {
+    const user = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
+    return user
+  } catch (e) {
+    return null
+  }
+}
+
+export async function validateRefreshToken(token) {
+  try {
+    const user = jwt.verify(token, process.env.JWT_REFRESH_SECRET)
+    return user
+  } catch (e) {
+    return null
+  }
 }

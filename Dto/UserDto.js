@@ -1,12 +1,11 @@
 class UserDto {
-  email
-  name
   id
+  name
+  email
   constructor(model) {
+    this.id = model._id
     this.email = model.email
     this.name = model.userName
-    this.id = model._id
   }
 }
-
 export { UserDto }
