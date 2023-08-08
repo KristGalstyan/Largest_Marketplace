@@ -30,7 +30,7 @@ export async function signupService({ userName, password, email }) {
 
   await MailService.sendActivationMail(
     email,
-    `${process.env.API_URL}/api/activate/${activationLink}`
+    `${process.env.API_URL}api/activate/${activationLink}`
   )
 
   const userDto = new UserDto(user)
@@ -76,6 +76,31 @@ export async function codeToChangePasswordSevice(codeToChange) {
     throw ApiError.BadRequest('Wrong code')
   }
   return true
+}
+
+export async function changedPasswordService(email, password, newPassword) {
+  const isExist = await UserModel.findOne({ email })
+  if (!isExist) {
+    throw ApiError.UnauthorizedError()
+  }
+  const passwordCompare = await bcrypt.compare(password, isExist.password)
+
+  if (!passwordCompare) {
+    throw ApiError.BadRequest('Incorrect password')
+  }
+
+  const hashPassword = await bcrypt.hash(newPassword, 7)
+  isExist.password = hashPassword
+  isExist.save()
+
+  const userDto = new UserDto(isExist)
+  const tokens = generateTokens({ ...userDto })
+  await saveToken(userDto.id, tokens.refreshToken)
+
+  return {
+    ...tokens,
+    user: userDto
+  }
 }
 
 export async function refreshService(refreshToken) {

@@ -2,6 +2,7 @@ import { validationResult } from 'express-validator'
 import { ApiError } from '../ErrorValidation/ApiError.js'
 import {
   activateService,
+  changedPasswordService,
   codeToChangePasswordSevice,
   forgotPassService,
   refreshService,
@@ -10,6 +11,7 @@ import {
 } from '../services/user.service.js'
 import { removeToken } from '../services/token.service.js'
 
+let email = ''
 export async function signup(req, res, next) {
   try {
     const errors = validationResult(req)
@@ -42,12 +44,23 @@ export async function codeToChangePassword(req, res, next) {
 
 export async function ChangePassword(req, res, next) {
   try {
-    const codeToChange = req.body.code
-    const data = await codeToChangePasswordSevice(codeToChange)
-    res.status(200).json({
-      condition: data
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return next(ApiError.BadRequest('Validation error', errors.array()))
+    }
+    const { email, password, newPassword } = req.body
+    const changedPassword = await changedPasswordService(
+      email,
+      password,
+      newPassword
+    )
+
+    res.cookie('refreshToken', changedPassword.refreshToken, {
+      maxAge: 30 * 24 * 60 * 60 * 1000
     })
+    res.json(changedPassword)
   } catch (e) {
+    console.log(e)
     next(e)
   }
 }
@@ -77,7 +90,7 @@ export async function forgotPass(req, res, next) {
     if (!errors.isEmpty()) {
       return next(ApiError.BadRequest('Validation error', errors.array()))
     }
-    const { email } = req.body
+    email = req.body.email
     const data = await forgotPassService({ email })
     res.status(200).json({
       condition: data
