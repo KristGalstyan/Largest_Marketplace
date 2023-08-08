@@ -1,6 +1,9 @@
 import { validationResult } from 'express-validator'
 import { ApiError } from '../ErrorValidation/ApiError.js'
 import {
+  activateService,
+  codeToChangePasswordSevice,
+  forgotPassService,
   refreshService,
   signinService,
   signupService
@@ -25,6 +28,29 @@ export async function signup(req, res, next) {
     next(e)
   }
 }
+export async function codeToChangePassword(req, res, next) {
+  try {
+    const codeToChange = req.body.code
+    const data = await codeToChangePasswordSevice(codeToChange)
+    res.status(200).json({
+      condition: data
+    })
+  } catch (e) {
+    next(e)
+  }
+}
+
+export async function ChangePassword(req, res, next) {
+  try {
+    const codeToChange = req.body.code
+    const data = await codeToChangePasswordSevice(codeToChange)
+    res.status(200).json({
+      condition: data
+    })
+  } catch (e) {
+    next(e)
+  }
+}
 
 export async function signin(req, res, next) {
   try {
@@ -45,12 +71,39 @@ export async function signin(req, res, next) {
   }
 }
 
+export async function forgotPass(req, res, next) {
+  try {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return next(ApiError.BadRequest('Validation error', errors.array()))
+    }
+    const { email } = req.body
+    const data = await forgotPassService({ email })
+    res.status(200).json({
+      condition: data
+    })
+  } catch (e) {
+    next(e)
+  }
+}
+
 export async function logout(req, res, next) {
   try {
     const { refreshToken } = req.cookies
     const token = await removeToken(refreshToken)
     res.clearCookie('refreshToken')
     res.status(200).json(token)
+  } catch (e) {
+    console.log(e)
+    next(e)
+  }
+}
+
+export async function activate(req, res, next) {
+  try {
+    const activationLink = req.params.link
+    const userData = await activateService(activationLink)
+    res.json(userData)
   } catch (e) {
     console.log(e)
     next(e)

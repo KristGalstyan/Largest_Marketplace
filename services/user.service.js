@@ -3,11 +3,15 @@ import { ApiError } from '../ErrorValidation/ApiError.js'
 import UserModel from '../model/user.model.js'
 import bcrypt from 'bcrypt'
 import {
+  findToken,
   generateTokens,
   saveToken,
   validateRefreshToken
 } from './token.service.js'
-import TokenModel from '../model/token.model.js'
+import MailService from './mail.service.js'
+import { v4 } from 'uuid'
+
+const code = v4()
 
 export async function signupService({ userName, password, email }) {
   const candidate = await UserModel.findOne({ email })
@@ -15,12 +19,19 @@ export async function signupService({ userName, password, email }) {
     throw ApiError.BadRequest(`this ${email} already exists`)
   }
   const hashPassword = await bcrypt.hash(password, 7)
+  const activationLink = v4()
 
   const user = await UserModel.create({
     userName,
     email,
-    password: hashPassword
+    password: hashPassword,
+    activationLink
   })
+
+  await MailService.sendActivationMail(
+    email,
+    `${process.env.API_URL}/api/activate/${activationLink}`
+  )
 
   const userDto = new UserDto(user)
   const tokens = generateTokens({ ...userDto })
@@ -51,12 +62,29 @@ export async function signinService({ password, email }) {
   }
 }
 
+export async function forgotPassService({ email }) {
+  const user = await UserModel.findOne({ email })
+  if (!user) {
+    throw ApiError.UnauthorizedError()
+  }
+  await MailService.sendCodeToChangePass(email, code)
+  return true
+}
+
+export async function codeToChangePasswordSevice(codeToChange) {
+  if (!codeToChange || codeToChange !== code) {
+    throw ApiError.BadRequest('Wrong code')
+  }
+  return true
+}
+
 export async function refreshService(refreshToken) {
   try {
     if (!refreshToken) {
       throw ApiError.UnauthorizedError()
     }
-    const tokenFromDB = await TokenModel.findOne({ refreshToken })
+    const tokenFromDB = await findToken(refreshToken)
+
     const userData = await validateRefreshToken(refreshToken)
 
     if (!tokenFromDB || !userData) {
@@ -72,6 +100,20 @@ export async function refreshService(refreshToken) {
       ...tokens,
       user: userDto
     }
+  } catch (e) {
+    console.log(e)
+  }
+}
+
+export async function activateService(activationLink) {
+  try {
+    const user = await UserModel.findOne({ activationLink })
+    if (!user) {
+      throw ApiError.BadRequest('Incorrect activation link')
+    }
+    user.isActivated = true
+    await user.save()
+    return user
   } catch (e) {
     console.log(e)
   }

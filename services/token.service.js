@@ -28,6 +28,10 @@ export async function removeToken(refreshToken) {
   const tokenData = await TokenModel.deleteOne(refreshToken)
   return tokenData
 }
+export async function findToken(refreshToken) {
+  const token = await TokenModel.findOne({ refreshToken })
+  return token
+}
 
 export async function validateAccessToken(token) {
   try {
